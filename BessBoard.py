@@ -3,10 +3,11 @@ from __future__ import annotations
 import chess
 import copy
 import itertools
+import dataclasses
 
 from typing import Dict, Generic, Hashable, Iterable, Iterator, List, Optional, Type, TypeVar, Union
 
-
+@dataclasses.dataclass(unsafe_hash=True)
 class BessMove:
 	from_square: chess.Square
 
@@ -15,6 +16,8 @@ class BessMove:
 	ban_piece: chess.PieceType
 
 	promotion: Optional[chess.PieceType] = None
+
+	drop: Optional[chess.PieceType] = None
 
 	def uci(self) -> str:
 		"""
@@ -78,7 +81,7 @@ class BessMove:
 
 	@classmethod
 	def null(cls) -> BessMove:
-		return cls(0, 0, 0)
+		return cls(0, 0, None)
 
 
 class BessBoard(chess.Board):
@@ -95,26 +98,28 @@ class BessBoard(chess.Board):
 		super().clear()
 
 	def generate_pseudo_legal_moves(self, from_mask: chess.Bitboard = chess.BB_ALL, to_mask: chess.Bitboard = chess.BB_ALL) -> Iterator[BessMove]:
-		pm = super.generate_pseudo_legal_moves(from_mask & self.pawns, to_mask)
-		nm = super.generate_pseudo_legal_moves(from_mask & self.knights, to_mask)
-		bm = super.generate_pseudo_legal_moves(from_mask & self.bishops, to_mask)
-		rm = super.generate_pseudo_legal_moves(from_mask & self.rooks, to_mask)
-		qm = super.generate_pseudo_legal_moves(from_mask & self.queens, to_mask)
-		km = super.generate_pseudo_legal_moves(from_mask & self.kings, to_mask)
+		pm = super().generate_pseudo_legal_moves(from_mask & self.pawns, to_mask)
+		nm = super().generate_pseudo_legal_moves(from_mask & self.knights, to_mask)
+		bm = super().generate_pseudo_legal_moves(from_mask & self.bishops, to_mask)
+		rm = super().generate_pseudo_legal_moves(from_mask & self.rooks, to_mask)
+		qm = super().generate_pseudo_legal_moves(from_mask & self.queens, to_mask)
+		km = super().generate_pseudo_legal_moves(from_mask & self.kings, to_mask)
 
-		match self.current_ban:
-			case chess.PAWN:
-				moves = itertools.chain(nm, bm, rm, qm ,km)
-			case chess.KNIGHT:
-				moves = itertools.chain(pm, bm, rm, qm, km)
-			case chess.BISHOP:
-				moves = itertools.chain(pm, nm, rm, qm, km)
-			case chess.ROOK:
-				moves = itertools.chain(pm, nm, bm, qm, km)
-			case chess.QUEEN:
-				moves = itertools.chain(pm, nm, bm, rm, km)
-			case chess.KING:
-				moves = itertools.chain(pm, nm, bm, rm, qm)
+		
+		if self.current_ban == chess.PAWN:
+			moves = itertools.chain(nm, bm, rm, qm ,km)
+		elif self.current_ban == chess.KNIGHT:
+			moves = itertools.chain(pm, bm, rm, qm, km)
+		elif self.current_ban == chess.BISHOP:
+			moves = itertools.chain(pm, nm, rm, qm, km)
+		elif self.current_ban == chess.ROOK:
+			moves = itertools.chain(pm, nm, bm, qm, km)
+		elif self.current_ban == chess.QUEEN:
+			moves = itertools.chain(pm, nm, bm, rm, km)
+		elif self.current_ban == chess.KING:
+			moves = itertools.chain(pm, nm, bm, rm, qm)
+		elif self.current_ban == None:
+			moves = itertools.chain(pm, nm, bm, rm, qm, km)
 
 		for move in moves:
 			for piece in chess.PIECE_TYPES:
