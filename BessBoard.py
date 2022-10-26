@@ -94,7 +94,31 @@ class BessBoard(chess.Board):
 		self.current_ban = None
 		super().clear()
 
-	
+	def generate_pseudo_legal_moves(self, from_mask: chess.Bitboard = chess.BB_ALL, to_mask: chess.Bitboard = chess.BB_ALL) -> Iterator[BessMove]:
+		pm = super.generate_pseudo_legal_moves(from_mask & self.pawns, to_mask)
+		nm = super.generate_pseudo_legal_moves(from_mask & self.knights, to_mask)
+		bm = super.generate_pseudo_legal_moves(from_mask & self.bishops, to_mask)
+		rm = super.generate_pseudo_legal_moves(from_mask & self.rooks, to_mask)
+		qm = super.generate_pseudo_legal_moves(from_mask & self.queens, to_mask)
+		km = super.generate_pseudo_legal_moves(from_mask & self.kings, to_mask)
+
+		match self.current_ban:
+			case chess.PAWN:
+				moves = itertools.chain(nm, bm, rm, qm ,km)
+			case chess.KNIGHT:
+				moves = itertools.chain(pm, bm, rm, qm, km)
+			case chess.BISHOP:
+				moves = itertools.chain(pm, nm, rm, qm, km)
+			case chess.ROOK:
+				moves = itertools.chain(pm, nm, bm, qm, km)
+			case chess.QUEEN:
+				moves = itertools.chain(pm, nm, bm, rm, km)
+			case chess.KING:
+				moves = itertools.chain(pm, nm, bm, rm, qm)
+
+		for move in moves:
+			for piece in chess.PIECE_TYPES:
+				yield BessMove(move.from_square, move.to_square, piece, promotion=move.promotion)
 
 
 	def gives_check(self, move: BessMove) -> bool:
