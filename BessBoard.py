@@ -94,20 +94,23 @@ class BessBoard(chess.Board):
 		self.current_ban = None
 		super().clear()
 
-	def _attackers_mask(self, color: chess.Color, square: chess.Square, occupied: chess.Bitboard) -> chess.Bitboard:
-		rank_pieces = chess.BB_RANK_MASKS[square] & occupied
-		file_pieces = chess.BB_FILE_MASKS[square] & occupied
-		diag_pieces = chess.BB_DIAG_MASKS[square] & occupied
-
-		attackers = (
-			(chess.BB_KING_ATTACKS[square] & self.kings if self.current_ban != chess.KING else 0)
-			
-			)
-
-		return attackers & self.occupied_co[color]
+	
 
 
 	def gives_check(self, move: BessMove) -> bool:
 		return super().gives_check(move.move())
 
-	
+
+class PseudoLegalBessMoveGenerator(chess.PseudoLegalMoveGenerator):
+	def __iter__(self) -> Iterator[BessMove]:
+		return self.board.generate_pseudo_legal_moves()
+
+	def __contains__(self, move: BessMove) -> bool:
+		return self.board.is_pseudo_legal(move.move())
+
+class LegalBessMoveGenerator(chess.LegalMoveGenerator):
+	def __iter__(self) -> Iterator[BessMove]:
+		return self.board.generate_legal_moves()
+
+	def __contains__(self, move: BessMove) -> bool:
+		return self.board.is_legal(move)
